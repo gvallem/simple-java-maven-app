@@ -1,7 +1,5 @@
 package com.mycompany.app;
 
-package com.mycompany.app;
-
 import com.sun.net.httpserver.HttpServer;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
