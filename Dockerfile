@@ -1,5 +1,15 @@
-FROM maven:3-alpine
-WORKDIR /appmavenjenkins
-ADD . /appmavenjenkins
-EXPOSE 3000
-CMD jenkins/scripts/deliver.sh
+# Build
+FROM maven:3.9.6-eclipse-temurin-17 AS build
+WORKDIR /app
+COPY pom.xml .
+RUN mvn -q -DskipTests dependency:go-offline
+COPY src ./src
+RUN mvn -q -DskipTests package
+
+# Run
+FROM eclipse-temurin:17-jre
+WORKDIR /app
+COPY --from=build /app/target/app.jar /app/app.jar
+# EXPOSE es informativo; Cloud Run usa la env PORT
+EXPOSE 8080
+CMD ["java","-jar","/app/app.jar"]
