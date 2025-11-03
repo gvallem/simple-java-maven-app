@@ -21,3 +21,5 @@ steps:
 
 images:
   - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_AR}/${_SERVICE}:$SHORT_SHA'
+options:
+  logging: CLOUD_LOGGING_ONLY
