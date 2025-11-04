@@ -1,57 +1,48 @@
-name: Build & Deploy to Cloud Run (OIDC)
+name: Build & Deploy to Cloud Run (OIDC, no secrets)
 
 on:
   push:
     branches: [ "master" ]
+  workflow_dispatch: {}
 
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
+      id-token: write     # requerido para OIDC
       contents: read
     env:
-      PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-      REGION: us-central1
-      REPO_AR: apps
-      SERVICE: hello-cr
+      PROJECT_ID: "gcp-mod1-lab-gobierno"
+      REGION: "us-central1"
+      REPO_AR: "apps"
+      SERVICE: "hello-cr"
+      # Ruta completa del provider WIF:
+      WIF_PROVIDER: "projects/1027817535963/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
 
     steps:
       - uses: actions/checkout@v4
 
-      # Diagnóstico: verifica que el secret exista (sin revelar su contenido)
-      - name: Verify secrets presence
-        run: |
-          if [ -z "${{ secrets.GCP_WIF_PROVIDER }}" ]; then
-            echo "Secret GCP_WIF_PROVIDER is EMPTY or not injected"; exit 1;
-          fi
-          if [ -z "${{ secrets.GCP_PROJECT_ID }}" ]; then
-            echo "Secret GCP_PROJECT_ID is EMPTY or not injected"; exit 1;
-          fi
-          echo "Secrets appear to be injected."
-
-      - name: Authenticate to Google Cloud (OIDC)
+      - name: Auth to Google Cloud via OIDC (no secrets)
         uses: google-github-actions/auth@v2
         with:
-          # ¡SOLO uno! (OIDC)
-          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
-          service_account: gha-deployer@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com
-          # IMPORTANTE: NO pongas 'credentials_json' en ningún lado
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: gha-deployer@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
+          # Importante: NO 'credentials_json'
 
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.PROJECT_ID }}
 
-      - name: Build
+      - name: Build image
         run: |
           docker build -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_AR}/${SERVICE}:${GITHUB_SHA} .
 
-      - name: Auth to Artifact Registry
+      - name: Configure Artifact Registry auth
         run: |
           gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
 
-      - name: Push
+      - name: Push image
         run: |
           docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_AR}/${SERVICE}:${GITHUB_SHA}
 
@@ -61,5 +52,4 @@ jobs:
             --image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_AR}/${SERVICE}:${GITHUB_SHA} \
             --region=${REGION} --allow-unauthenticated \
             --service-account=gha-deployer@${PROJECT_ID}.iam.gserviceaccount.com
-
 
