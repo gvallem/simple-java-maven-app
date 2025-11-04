@@ -17,7 +17,7 @@ jobs:
       REPO_AR: "apps"
       SERVICE: "hello-cr"
       # Ruta completa del provider WIF:
-      WIF_PROVIDER: "projects/1027817535963/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
+      WIF_PROVIDER: "projects/1027817535963/locations/global/workloadIdentityPools/github-pool-3/providers/github-provider"
 
     steps:
       - uses: actions/checkout@v4
