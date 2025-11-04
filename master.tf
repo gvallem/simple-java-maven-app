@@ -121,7 +121,7 @@ resource "google_compute_instance" "vm_web" {
     set -e
     apt-get update -y
     apt-get install -y apache2
-    echo "Hola desde Terraform en ${HOSTNAME}" > /var/www/html/index.html
+    echo "Hola desde Terraform en $${HOSTNAME}" > /var/www/html/index.html
     systemctl enable apache2
     systemctl restart apache2
   EOT
