@@ -10,7 +10,7 @@ public class App {
     int port = Integer.parseInt(System.getenv().getOrDefault("PORT", "8080"));
     HttpServer server = HttpServer.create(new InetSocketAddress("0.0.0.0", port), 0);
     server.createContext("/", exchange -> {
-      byte[] resp = "Hola mundo GCP".getBytes(StandardCharsets.UTF_8);
+      byte[] resp = "Hola mundo".getBytes(StandardCharsets.UTF_8);
       exchange.sendResponseHeaders(200, resp.length);
       try (OutputStream os = exchange.getResponseBody()) { os.write(resp); }
     });
