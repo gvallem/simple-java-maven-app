@@ -8,7 +8,7 @@ jobs:
   build-deploy:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write     # OIDC
+      id-token: write
       contents: read
     env:
       PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
@@ -19,16 +19,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Diagnóstico: verifica que el secret exista (sin revelar su contenido)
+      - name: Verify secrets presence
+        run: |
+          if [ -z "${{ secrets.GCP_WIF_PROVIDER }}" ]; then
+            echo "Secret GCP_WIF_PROVIDER is EMPTY or not injected"; exit 1;
+          fi
+          if [ -z "${{ secrets.GCP_PROJECT_ID }}" ]; then
+            echo "Secret GCP_PROJECT_ID is EMPTY or not injected"; exit 1;
+          fi
+          echo "Secrets appear to be injected."
+
       - name: Authenticate to Google Cloud (OIDC)
         uses: google-github-actions/auth@v2
         with:
-          project_id: ${{ env.PROJECT_ID }}
+          # ¡SOLO uno! (OIDC)
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
-          service_account: gha-deployer@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
-          # NO 'credentials_json' aquí
+          service_account: gha-deployer@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+          # IMPORTANTE: NO pongas 'credentials_json' en ningún lado
 
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
 
       - name: Build
         run: |
@@ -48,6 +61,5 @@ jobs:
             --image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_AR}/${SERVICE}:${GITHUB_SHA} \
             --region=${REGION} --allow-unauthenticated \
             --service-account=gha-deployer@${PROJECT_ID}.iam.gserviceaccount.com
-
 
 
