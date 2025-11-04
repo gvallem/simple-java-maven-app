@@ -1,25 +1,41 @@
 substitutions:
-  _REGION: "us-central1"
-  _REPO_AR: "apps"
-  _SERVICE: "hello-cr"
+  _SA_EMAIL: "tf-runner@$PROJECT_ID.iam.gserviceaccount.com"
 
 steps:
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['build','-t','${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_AR}/${_SERVICE}:$SHORT_SHA','.']
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push','${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_AR}/${_SERVICE}:$SHORT_SHA']
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: gcloud
+    id: 'Auth (impersonate tf-runner)'
+    entrypoint: bash
     args:
-      - run
-      - deploy
-      - ${_SERVICE}
-      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_AR}/${_SERVICE}:$SHORT_SHA
-      - --region=${_REGION}
-      - --allow-unauthenticated
-      - --service-account=cicd-deployer@$PROJECT_ID.iam.gserviceaccount.com
+      - -c
+      - |
+        gcloud config set project $PROJECT_ID
+        gcloud auth application-default set-quota-project $PROJECT_ID
+        gcloud auth print-identity-token >/dev/null
+        gcloud auth impersonate-service-account ${_SA_EMAIL} --quiet
 
-images:
-  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_AR}/${_SERVICE}:$SHORT_SHA'
+  - name: 'hashicorp/terraform:1.8'
+    id: 'Terraform Init'
+    entrypoint: sh
+    args:
+      - -c
+      - |
+        terraform init -upgrade
+
+  - name: 'hashicorp/terraform:1.8'
+    id: 'Terraform Plan'
+    entrypoint: sh
+    args:
+      - -c
+      - |
+        terraform plan -out=tfplan
+
+  - name: 'hashicorp/terraform:1.8'
+    id: 'Terraform Apply'
+    entrypoint: sh
+    args:
+      - -c
+      - |
+        terraform apply -auto-approve tfplan
+
 options:
   logging: CLOUD_LOGGING_ONLY
