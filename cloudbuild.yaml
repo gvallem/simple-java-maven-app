@@ -1,41 +1,56 @@
+
 substitutions:
-  _SA_EMAIL: "tf-runner@$PROJECT_ID.iam.gserviceaccount.com"
+  _SA_EMAIL: "tf-runner@gcp-mod1-lab-gobierno.iam.gserviceaccount.com"
 
 steps:
+  # (Opcional) solo para fijar el proyecto en gcloud; Terraform no usa ADC.
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: 'Auth (impersonate tf-runner)'
+    id: 'Config project (no ADC)'
     entrypoint: bash
     args:
       - -c
       - |
-        gcloud config set project $PROJECT_ID
-        gcloud auth application-default set-quota-project $PROJECT_ID
-        gcloud auth print-identity-token >/dev/null
-        gcloud auth impersonate-service-account ${_SA_EMAIL} --quiet
+        gcloud config set project gcp-mod1-lab-gobierno
+        gcloud --version
 
+  # Terraform Init
   - name: 'hashicorp/terraform:1.8'
     id: 'Terraform Init'
+    env:
+      - GOOGLE_IMPERSONATE_SERVICE_ACCOUNT=${_SA_EMAIL}
+      - GOOGLE_PROJECT=gcp-mod1-lab-gobierno
+      - GOOGLE_CLOUD_PROJECT=gcp-mod1-lab-gobierno
+      - TF_VAR_project_id=gcp-mod1-lab-gobierno
+      - TF_VAR_region=us-central1
+      - TF_VAR_zone=us-central1-a
     entrypoint: sh
-    args:
-      - -c
-      - |
-        terraform init -upgrade
+    args: [ "-c", "terraform init -upgrade" ]
 
+  # Terraform Plan
   - name: 'hashicorp/terraform:1.8'
     id: 'Terraform Plan'
+    env:
+      - GOOGLE_IMPERSONATE_SERVICE_ACCOUNT=${_SA_EMAIL}
+      - GOOGLE_PROJECT=gcp-mod1-lab-gobierno
+      - GOOGLE_CLOUD_PROJECT=gcp-mod1-lab-gobierno
+      - TF_VAR_project_id=gcp-mod1-lab-gobierno
+      - TF_VAR_region=us-central1
+      - TF_VAR_zone=us-central1-a
     entrypoint: sh
-    args:
-      - -c
-      - |
-        terraform plan -out=tfplan
+    args: [ "-c", "terraform plan -out=tfplan" ]
 
+  # Terraform Apply
   - name: 'hashicorp/terraform:1.8'
     id: 'Terraform Apply'
+    env:
+      - GOOGLE_IMPERSONATE_SERVICE_ACCOUNT=${_SA_EMAIL}
+      - GOOGLE_PROJECT=gcp-mod1-lab-gobierno
+      - GOOGLE_CLOUD_PROJECT=gcp-mod1-lab-gobierno
+      - TF_VAR_project_id=gcp-mod1-lab-gobierno
+      - TF_VAR_region=us-central1
+      - TF_VAR_zone=us-central1-a
     entrypoint: sh
-    args:
-      - -c
-      - |
-        terraform apply -auto-approve tfplan
+    args: [ "-c", "terraform apply -auto-approve tfplan" ]
 
 options:
   logging: CLOUD_LOGGING_ONLY
